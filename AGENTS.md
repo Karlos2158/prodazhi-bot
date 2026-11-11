@@ -1,4 +1,4 @@
-﻿# AGENTS.md
+# AGENTS.md
 
 Telegram-бот для магазина при санатории: принимает фото чеков, сопоставляет товары
 с Excel-номенклатурой и собирает дневные Excel-отчёты с зарплатными колонками.
@@ -13,9 +13,9 @@ Telegram-бот для магазина при санатории: приним�
 
 ## Запуск и проверка
 
-- **Боевая копия живёт на SPQR: `G:\Sanator\Bot\`** (код и конфиги), а данные — в `G:\Sanator\2026\` (номенклатура, чеки, отчёты). Всё под одной папкой `G:\Sanator`. Доступ: `ssh -i C:\Users\GHO\.ssh\spqr_ed25519 SPQR@192.168.1.199`, помощник `D:\AI CENTR\tools\spqr.ps1`. Бот запускается через `G:\Sanator\Bot\run_bot.bat`, лог — `G:\Sanator\Bot\bot.log`.
+- **Боевая копия живёт на SPQR: `G:\Sanator\prodazhi-bot\`** (код и конфиги), а данные — в `G:\Sanator\2026\` (номенклатура, чеки, отчёты). Всё под одной папкой `G:\Sanator`. Доступ: `ssh -i C:\Users\GHO\.ssh\spqr_ed25519 SPQR@192.168.1.199`, помощник `D:\AI CENTR\tools\spqr.ps1`. Бот запускается через `G:\Sanator\prodazhi-bot\run_bot.bat`, лог — `G:\Sanator\prodazhi-bot\bot.log`.
 - `python -u bot_main.py` из корня боевой копии. Это долгоживущий цикл Telegram `getUpdates`; второй экземпляр с тем же токеном запускать нельзя.
-- `run_bot.bat` — боевой запуск: бесконечный перезапуск, вывод в `bot.log`. Запуск на SPQR — отсоединённым процессом от SSH-сессии (например, `([wmiclass]"Win32_Process").Create('cmd.exe /c G:\Sanator\Bot\run_bot.bat', 'G:\Sanator\Bot', $null)`); `Start-Process` через SSH не годится — процесс умирает вместе с сессией.
+- `run_bot.bat` — боевой запуск: бесконечный перезапуск, вывод в `bot.log`. Запуск на SPQR — отсоединённым процессом от SSH-сессии (например, `([wmiclass]"Win32_Process").Create('cmd.exe /c G:\Sanator\prodazhi-bot\run_bot.bat', 'G:\Sanator\prodazhi-bot', $null)`); `Start-Process` через SSH не годится — процесс умирает вместе с сессией.
 - Минимальная проверка после правок: `python -m py_compile bot_main.py bot_sales.py bot_vision.py sales_core.py apply_rates.py`.
 - Распознавание — локальное: Ollama на SPQR `http://127.0.0.1:11434`, модель `qwen2.5vl:7b` (модели лежат в `G:\Ollama_Data\models`). Gemini с SPQR недоступен (TLS блокируется), `vision_engine` должен оставаться `local`.
 
