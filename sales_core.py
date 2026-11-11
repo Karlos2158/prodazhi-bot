@@ -5,9 +5,9 @@ import difflib
 import os
 import re
 
-NOM_PATH = r"G:\Sanator\2026\nom\11\Лесная поляна ЖЦП(2).xlsx"
-BASE_DIR = r"G:\Sanator\2026\foto"
-REG_PATH = r"G:\Sanator\2026\reestr_chekov.csv"
+NOM_PATH = r"G:\prodazhi-bot\2026\nom\11\Лесная поляна ЖЦП(2).xlsx"
+BASE_DIR = r"G:\prodazhi-bot\2026\foto"
+REG_PATH = r"G:\prodazhi-bot\2026\reestr_chekov.csv"
 
 CATS = ("Вывод", "Матрица", "Новинка", "Новинки")
 TYPES = ("Браслет", "Кольцо", "Серьги", "Колье", "Подвеска", "Пусеты", "Брошь", "Цепь", "Текстиль")

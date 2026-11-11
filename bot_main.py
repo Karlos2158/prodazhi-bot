@@ -60,7 +60,7 @@ ENGINE = (CFG.get("vision_engine") or "local").lower()
 GEMINI_KEY = (CFG.get("gemini_api_key") or "").strip()
 GEMINI_MODEL = CFG.get("gemini_model") or "gemini-2.5-flash"
 PATHS = CFG.get("paths", {})
-ROOT_DIR = CFG.get("root") or r"G:\Sanator"
+ROOT_DIR = CFG.get("root") or r"G:\prodazhi-bot"
 CONFIG_PATH = PATHS.get("config") or os.path.join(ROOT, "Конфиг.json")
 HOME = CFG.get("home_point") or "Санаторий Лесная Поляна"
 
