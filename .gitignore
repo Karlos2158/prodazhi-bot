@@ -1,0 +1,31 @@
+# Секреты и рабочее состояние — НИКОГДА не попадают в репозиторий
+bot_config.json
+bot_state.json
+*.log
+*.log.*
+bot_temp/
+bot.err.log
+
+# Данные магазина: фото чеков, дневные и месячные отчёты, номенклатура, план
+Sanator/
+*.xlsx
+*.csv
+
+# Служебное
+__pycache__/
+*.pyc
+*.pyo
+.vscode/
+.idea/
+
+# Устаревшие снимки и посторонние файлы (не исходники бота)
+депо/
+python bot_main.py/
+create_excel_files.py
+*.docx
+*.lnk
+
+# Локальные черновики и бэкапы
+*.bak
+*_backup_*/
+*.tmp

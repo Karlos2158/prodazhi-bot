@@ -1,0 +1,26 @@
+{
+  "_комментарий": "ШАБЛОН конфига. Настоящий bot_config.json с секретами в репозиторий не попадает.",
+  "bot_token": "СЮДА_ТОКЕН_БОТА_ОТ_BOTFATHER",
+  "gemini_api_key": "СЮДА_КЛЮЧ_GEMINI_ИЛИ_ПУСТАЯ_СТРОКА",
+  "gemini_model": "gemini-2.5-flash",
+  "allowed_chats": [],
+  "invite_code": "КОД_ДОСТУПА",
+  "home_point": "Лесная поляна",
+  "points": [],
+  "health_check_minutes": 0,
+  "root": "G:\\Sanator",
+  "vision_engine": "local",
+  "vision_model": "qwen2.5vl:7b",
+  "paths": {
+    "nom": "G:\\Sanator\\2026\\nom\\11\\Лесная поляна ЖЦП(2).xlsx",
+    "base": "G:\\Sanator\\2026\\foto",
+    "registry": "G:\\Sanator\\2026\\reestr_chekov.csv",
+    "rates": "G:\\SanatorBot\\stavki.json",
+    "config": "G:\\SanatorBot\\Конфиг.json"
+  },
+  "проценты_категорий": {
+    "Вывод": 4.0,
+    "Матрица": 4.0,
+    "Новинка": 3.0
+  }
+}
