@@ -975,7 +975,9 @@ def apply_answer(chat_id, p):
 
 def recognize(image):
     if ENGINE == "gemini" and GEMINI_KEY:
-        return bv.extract_gemini(image, GEMINI_KEY, GEMINI_MODEL)
+        return bv.extract_gemini(image, GEMINI_KEY, GEMINI_MODEL,
+                                 relay=(CFG.get("gemini_relay") or "").strip() or None,
+                                 relay_token=(CFG.get("gemini_relay_token") or "").strip() or None)
     return bv.extract_local(image, MODEL)
 
 

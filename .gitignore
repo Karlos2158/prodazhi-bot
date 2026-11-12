@@ -23,3 +23,6 @@ __pycache__/
 *.bak
 *_backup_*/
 *.tmp
+
+_incoming/
+_bak_relay/

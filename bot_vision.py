@@ -391,7 +391,15 @@ def extract_local(image_bytes, model="qwen2.5vl:7b", url=OLLAMA_URL, timeout=600
     return best
 
 
-def extract_gemini(image_bytes, api_key, model="gemini-2.5-flash", mime="image/jpeg"):
+def extract_gemini(image_bytes, api_key, model="gemini-2.5-flash", mime="image/jpeg",
+                   relay=None, relay_token=None):
+    """Распознавание через Gemini.
+
+    relay — адрес релеевого сервера на GHO (вида
+    "http://192.168.1.194:8714/v1beta/models/{model}:generateContent"). Если он
+    задан, запрос идёт туда, а ключ Gemini подставляет сам релей на GHO.
+    Без relay ходим в Google напрямую (с SPQR Google отказывает по географии).
+    """
     img = prepare(image_bytes)
     payload = {
         "contents": [{"parts": [
@@ -400,12 +408,20 @@ def extract_gemini(image_bytes, api_key, model="gemini-2.5-flash", mime="image/j
         ]}],
         "generationConfig": {"temperature": 0, "response_mime_type": "application/json"},
     }
+    if relay:
+        url = relay.format(model=model)
+        headers = {"Content-Type": "application/json"}
+        if relay_token:
+            headers["X-Relay-Token"] = relay_token
+    else:
+        url = GEMINI_URL.format(model=model, key=api_key)
+        headers = {"Content-Type": "application/json"}
     last_err = None
     for attempt in range(5):
         req = urllib.request.Request(
-            GEMINI_URL.format(model=model, key=api_key),
+            url,
             data=json.dumps(payload).encode("utf-8"),
-            headers={"Content-Type": "application/json"}, method="POST")
+            headers=headers, method="POST")
         try:
             with urllib.request.urlopen(req, timeout=180) as r:
                 body = json.loads(r.read().decode("utf-8"))
