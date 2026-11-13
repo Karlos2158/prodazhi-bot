@@ -97,7 +97,9 @@ def plan_percent(cfg, met):
         return 0.0
 
 def plan_file(root, year, month):
-    return os.path.join(root, str(year), "nom", str(month), "план.json")
+    # <root>\Номенклатура\Ном 2026\Ном 11\план.json
+    return os.path.join(root, "Номенклатура", "Ном {}".format(year),
+                        "Ном {:02d}".format(int(month)), "план.json")
 
 def load_plan(root, year, month):
     p = plan_file(root, year, month)

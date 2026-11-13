@@ -5,9 +5,9 @@ import difflib
 import os
 import re
 
-NOM_PATH = r"G:\prodazhi-bot\2026\nom\11\Лесная поляна ЖЦП(2).xlsx"
-BASE_DIR = r"G:\prodazhi-bot\2026\foto"
-REG_PATH = r"G:\prodazhi-bot\2026\reestr_chekov.csv"
+NOM_PATH = ""
+BASE_DIR = ""
+REG_PATH = ""
 
 CATS = ("Вывод", "Матрица", "Новинка", "Новинки")
 TYPES = ("Браслет", "Кольцо", "Серьги", "Колье", "Подвеска", "Пусеты", "Брошь", "Цепь", "Текстиль")
@@ -96,7 +96,12 @@ def _colors(s):
 def load_catalog(path=None):
     """Читает номенклатуру. Только чтение, файл никогда не сохраняется."""
     from openpyxl import load_workbook
-    wb = load_workbook(path or NOM_PATH, data_only=True)
+    path = path or NOM_PATH
+    if not path or not os.path.exists(path):
+        raise FileNotFoundError(
+            "номенклатура не найдена: положите Excel-файл (.xlsx) в папку бота "
+            "или в <root>\\Номенклатура\\Ном <год>\\Ном <месяц>\\")
+    wb = load_workbook(path, data_only=True)
     ws = wb.worksheets[0]
     cur, items = None, []
     for r in range(1, ws.max_row + 1):

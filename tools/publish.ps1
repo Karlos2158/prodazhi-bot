@@ -53,3 +53,15 @@ if ($LASTEXITCODE -ne 0) { throw "tag push failed" }
 
 Write-Host "Published $next" -ForegroundColor Green
 git log --oneline -3
+
+# 6. GitHub release (so "Latest" on the Releases page is really the newest version)
+if (Get-Command gh -ErrorAction SilentlyContinue) {
+    try {
+        gh release create $next --title "Bot $next" --notes $Message | Out-Host
+        Write-Host "Release $next created" -ForegroundColor Green
+    } catch {
+        Write-Host "Release not created (tag is pushed): $_" -ForegroundColor Yellow
+    }
+} else {
+    Write-Host "gh CLI not found - release not created, tag is pushed." -ForegroundColor Yellow
+}

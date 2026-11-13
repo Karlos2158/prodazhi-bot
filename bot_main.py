@@ -24,6 +24,13 @@ CFG_PATH = os.path.join(ROOT, "bot_config.json")
 STATE_PATH = os.path.join(ROOT, "bot_state.json")
 TEMP_DIR = os.path.join(ROOT, "bot_temp")
 
+# Структура папок внутри корня (root). Бот создаёт их сам:
+#   <root>\Номенклатура\Ном 2026\Ном 11\  — Excel-номенклатура месяца и «план.json»
+#   <root>\Отчеты\2026\11\13.11.2026\     — фото чеков, data.json, дневной xlsx
+#   <root>\Отчеты\2026\_отчёты\           — сводные отчёты за период
+DATA_DIR = "Отчеты"
+NOM_DIR = "Номенклатура"
+
 BTN_REPORT = "📊 Отчёт за день"
 BTN_PERIOD = "📅 Отчёт за период"
 BTN_CANCEL = "🗑 Удалить отчёт"
@@ -59,6 +66,7 @@ MODEL = CFG.get("vision_model") or "qwen2.5vl:7b"
 ENGINE = (CFG.get("vision_engine") or "local").lower()
 GEMINI_KEY = (CFG.get("gemini_api_key") or "").strip()
 GEMINI_MODEL = CFG.get("gemini_model") or "gemini-2.5-flash"
+OLLAMA_URL = (CFG.get("ollama_url") or "").strip() or bv.OLLAMA_URL
 PATHS = CFG.get("paths", {})
 ROOT_DIR = CFG.get("root") or r"G:\prodazhi-bot"
 CONFIG_PATH = PATHS.get("config") or os.path.join(ROOT, "Конфиг.json")
@@ -66,13 +74,14 @@ HOME = CFG.get("home_point") or "Санаторий Лесная Поляна"
 
 
 def base_for(date):
+    # База дня: <root>\Отчеты\<год>, дальше bot_sales добавляет <ММ>\<ДД.ММ.ГГГГ>
     try:
         year = str(date).split(".")[-1]
         if len(year) == 4 and year.isdigit():
-            return os.path.join(ROOT_DIR, year, "foto")
+            return os.path.join(ROOT_DIR, DATA_DIR, year)
     except (AttributeError, IndexError):
         pass
-    return PATHS.get("base") or os.path.join(ROOT_DIR, time.strftime("%Y"), "foto")
+    return os.path.join(ROOT_DIR, DATA_DIR, time.strftime("%Y"))
 
 
 _CATALOG_CACHE = {}
@@ -83,23 +92,86 @@ def _natural_key(name):
     return [int(t) if t.isdigit() else t.lower() for t in re.split(r"(\d+)", name)]
 
 
+def _newest_xlsx(folder):
+    # Самый свежий файл номенклатуры в папке: по дате изменения, а при равных
+    # датах — по «естественному» имени (чтобы «(2)» было новее, чем без него).
+    try:
+        files = [os.path.join(folder, f) for f in os.listdir(folder)
+                 if f.lower().endswith((".xlsx", ".xls")) and not f.startswith("~$")]
+    except OSError:
+        return None
+    if not files:
+        return None
+    files.sort(key=lambda p: (os.path.getmtime(p), _natural_key(os.path.basename(p))),
+               reverse=True)
+    return files[0]
+
+
+def _newest_xlsx_deep(folder):
+    # Самый свежий файл номенклатуры во всех вложенных папках (например,
+    # в начале нового месяца: берём последнюю загруженную номенклатуру).
+    best = None
+    for cur, _dirs, names in os.walk(folder):
+        found = _newest_xlsx(cur) if any(
+            n.lower().endswith((".xlsx", ".xls")) and not n.startswith("~$") for n in names) else None
+        if found and (best is None or os.path.getmtime(found) > os.path.getmtime(best)):
+            best = found
+    return best
+
+
+def nom_year_dir(year):
+    return os.path.join(ROOT_DIR, NOM_DIR, "Ном {}".format(year))
+
+
+def nom_month_dir(year, month):
+    return os.path.join(nom_year_dir(year), "Ном {:02d}".format(int(month)))
+
+
 def nom_for(date):
-    # Берем САМЫЙ СВЕЖИЙ файл номенклатуры месяца: по дате изменения,
-    # а при равных датах — по «естественному» имени (чтобы «(2)» было новее, чем без него)
+    # Порядок поиска номенклатуры (все папки просматриваются, берётся самый
+    # свежий файл; при равных датах приоритет выше у папки месяца):
+    #   1. папка месяца  <root>\Номенклатура\Ном <год>\Ном <ММ>\  (бот создаёт её сам)
+    #   2. папка года    <root>\Номенклатура\Ном <год>\
+    #   3. сама папка бота <root>\      (продавец просто положил файл рядом с ботом)
+    #   4. <root>\Номенклатура\
+    #   5. paths.nom из конфига (запасной вариант)
     try:
         parts = str(date).split(".")
         year, month = parts[2], parts[1]
-        d = os.path.join(ROOT_DIR, year, "nom", month)
-        if os.path.isdir(d):
-            files = [os.path.join(d, f) for f in os.listdir(d)
-                     if f.lower().endswith((".xlsx", ".xls")) and not f.startswith("~$")]
-            if files:
-                files.sort(key=lambda p: (os.path.getmtime(p), _natural_key(os.path.basename(p))),
-                           reverse=True)
-                return files[0]
-    except (AttributeError, IndexError, OSError):
+        found = []
+        for rank, folder in enumerate((nom_month_dir(year, month),
+                                       nom_year_dir(year),
+                                       ROOT_DIR,
+                                       os.path.join(ROOT_DIR, NOM_DIR))):
+            p = _newest_xlsx(folder)
+            if p:
+                found.append((os.path.getmtime(p), -rank, _natural_key(os.path.basename(p)), p))
+        if found:
+            found.sort()
+            return found[-1][3]
+        # ничего в ожидаемых местах — берём последнюю загруженную номенклатуру
+        deep = _newest_xlsx_deep(os.path.join(ROOT_DIR, NOM_DIR))
+        if deep:
+            return deep
+    except (AttributeError, IndexError, OSError, ValueError):
         pass
     return PATHS.get("nom")
+
+
+def ensure_layout():
+    # Бот сам создаёт папки под текущий год и месяц: продавцу не нужно следить
+    # за календарём и заводить папки вручную.
+    import datetime
+    now = datetime.datetime.now()
+    made = []
+    for d in (os.path.join(ROOT_DIR, DATA_DIR, str(now.year)),
+              nom_month_dir(now.year, now.month)):
+        try:
+            os.makedirs(d, exist_ok=True)
+            made.append(d)
+        except OSError as e:
+            print("не смог создать папку {}: {}".format(d, e))
+    return made
 
 
 def catalog_for(date):
@@ -187,10 +259,11 @@ def show_settings(chat_id):
 
 
 def month_sold(year, month):
-    base = os.path.join(ROOT_DIR, str(year), "foto")
+    base = base_for("01.{:02d}.{}".format(int(month), year))
     total = 0.0
+    mdir = os.path.join(base, "{:02d}".format(int(month)))
     try:
-        for day in os.listdir(base):
+        for day in os.listdir(mdir):
             data = bs.load_day(base, day)
             for rec in data.get("receipts", []):
                 total += float(rec.get("total") or 0)
@@ -447,8 +520,8 @@ def ask_next(chat_id):
 def latest_day():
     best, best_t = None, 0
     try:
-        for year in os.listdir(ROOT_DIR):
-            ydir = os.path.join(ROOT_DIR, year, "foto")
+        for year in os.listdir(os.path.join(ROOT_DIR, DATA_DIR)):
+            ydir = os.path.join(ROOT_DIR, DATA_DIR, year)
             if not os.path.isdir(ydir):
                 continue
             for m in os.listdir(ydir):
@@ -554,7 +627,7 @@ def send_period_report(chat_id, dates, title=None):
         send(chat_id, "За выбранные даты чеков нет.")
         return
     year = dates[0].split(".")[-1]
-    out_dir = os.path.join(ROOT_DIR, year, "foto", "_отчёты")
+    out_dir = os.path.join(ROOT_DIR, DATA_DIR, year, "_отчёты")
     os.makedirs(out_dir, exist_ok=True)
     name = "отчёт_{}_{}.xlsx".format(dates[0].replace(".", "-"), dates[-1].replace(".", "-"))
     path = os.path.join(out_dir, name)
@@ -978,7 +1051,7 @@ def recognize(image):
         return bv.extract_gemini(image, GEMINI_KEY, GEMINI_MODEL,
                                  relay=(CFG.get("gemini_relay") or "").strip() or None,
                                  relay_token=(CFG.get("gemini_relay_token") or "").strip() or None)
-    return bv.extract_local(image, MODEL)
+    return bv.extract_local(image, MODEL, OLLAMA_URL)
 
 
 _RECENT_PHOTOS = {}
@@ -1210,6 +1283,11 @@ def main():
         print("print bot_token missing")
         return
     print("бот запущен, модель:", MODEL)
+    dirs = ensure_layout()
+    for d in dirs:
+        print("папка данных:", d)
+    nom = nom_for(time.strftime("%d.%m.%Y"))
+    print("номенклатура:", nom or "НЕ НАЙДЕНА — положите Excel-файл в папку бота")
     
     offset = 0
     
@@ -1224,6 +1302,14 @@ def main():
                     import traceback
                     print("ошибка обработки:", repr(e))
                     traceback.print_exc()
+                    # чтобы продавец не остался без ответа (например, нет номенклатуры)
+                    try:
+                        cid = ((u.get("message") or {}).get("chat") or {}).get("id")
+                        if cid:
+                            send(cid, "Ошибка: {}\nЕсли это про номенклатуру — положите Excel-файл (.xlsx) "
+                                      "в папку бота и пришлите фото снова.".format(str(e)[:300]))
+                    except Exception:
+                        pass
         except Exception as e:
             print("ошибка опроса:", e)
             time.sleep(5)
